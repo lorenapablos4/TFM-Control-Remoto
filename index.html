@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Control remoto</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styleFinal.css') }}">
+    <style>
+        body{
+            background-color: #7A7A7A
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Control remoto</h2>
+    </div>
+
+    <div class="main-container">
+
+        <div class="bottom-controls">
+            <div class="control-panel">
+                <div class="directional">
+                    <div></div>
+                    <button class="up" onmousedown="sendDir('up')" onmouseup="sendDir('stop_up')" ontouchstart="sendDir('up')" ontouchend="sendDir('stop_up')">↑</button>
+                    <div></div>
+
+                    <button class="left" onmousedown="sendDir('left')" onmouseup="sendDir('stop_left')" ontouchstart="sendDir('left')" ontouchend="sendDir('stop_left')">←</button>
+                    <button class="center" onclick="sendDir('center')">CENTER</button>
+                    <button class="right" onmousedown="sendDir('right')" onmouseup="sendDir('stop_right')" ontouchstart="sendDir('right')" ontouchend="sendDir('stop_right')">→</button>
+
+                    <div></div>
+                    <button class="down" onmousedown="sendDir('down')" onmouseup="sendDir('stop_down')" ontouchstart="sendDir('down')" ontouchend="sendDir('stop_down')">↓</button>
+                    <div></div>
+                </div>
+                <button class="stop" onclick="sendDir('stop')">STOP</button>
+                <button id="fanButton" class="fan" onclick="toggleFan()">Ventilador</button>
+            </div>
+        </div>
+
+        <div class="video-container" id="videoBox">
+            <!-- <img src="{{ url_for('video_feed') }}" id="videoStream"> -->
+            <img src="http://192.168.1.100:8080/?action=stream" id="videoStream">
+            <button type="button" class="fullscreen-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+        </div>
+
+        <div class="auto-panel">
+            <h1>Other controls</h1>
+            <form action="/control" method="post">
+                <div class="grid-buttons">
+                    <button class="eyetracking" name="dir" value="eyeon">EyeTracking</button>
+                    <button class="eyePause" name="dir" value="eyeoff">PAUSE</button>
+
+                    <button type="button" class="hand" onclick="enviarYMostrar('handon')">HAND</button>
+                    <button type="button" class="handPause" onclick="enviarYOcultar('handoff')">PAUSE</button>
+                    
+                    <button class="voice" name="dir" value="voiceon">VOICE</button>
+                    <button class="voicePause" name="dir" value="voiceoff">PAUSE</button>
+                    
+                    <button class="person" name="dir" value="personon">PERSON</button>
+                    <button class="personPause" name="dir" value="personoff">PAUSE</button>
+                </div>
+            </form>
+            
+            <div id="imagen-hand" style="display: none; margin-top: 60px; text-align: center;">
+                <img src="{{ url_for('static', filename='gestos.png') }}" alt="Hand tracking" style="max-width: 350px; border-radius: 14px;">
+            </div>
+            <div id="recording-indicator" style="display:none; color: red; font-weight: bold;">
+                o Grabando...
+            </div>
+        </div>
+    </div>
+    
+    
+
+    <script>
+        let fanActivo=false;
+        
+        function toggleFan(){
+            const boton = document.getElementById("fanButton");
+            fanActivo = !fanActivo;
+            
+           // Cambiar aspecto visual
+          if (fanActivo) {
+            boton.classList.add("active");
+            boton.textContent = "Desactivar ventilador";
+            sendDir("fanon");
+          } else {
+            boton.classList.remove("active");
+            boton.textContent = "Activar ventilador";
+            sendDir("fanoff");
+          } 
+        }
+        
+        function sendDir(dir) {
+            fetch('/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'dir=' + dir
+            });
+        }
+        
+        function enviarYMostrar(dir) {
+            sendDir(dir);
+            document.getElementById("imagen-hand").style.display = "block";
+        }
+
+        function enviarYOcultar(dir) {
+            sendDir(dir);
+            document.getElementById("imagen-hand").style.display = "none";
+        }
+
+        function toggleFullscreen() {
+            const videoBox = document.getElementById("videoBox");
+            if (!document.fullscreenElement) {
+                videoBox.requestFullscreen().catch(err => {
+                    alert(`Error al activar pantalla completa: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        setInterval(() => {
+            fetch('/recording_status')
+                .then(response => response.text())
+                .then(status => {
+                    const indicator = document.getElementById("recording-indicator");
+                    if (status === "ON") {
+                        indicator.style.display = "block";
+                    } else {
+                        indicator.style.display = "none";
+                    }
+            });
+        }, 1000);
+        
+    </script>
+</body>
+</html>
